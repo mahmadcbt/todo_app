@@ -6,61 +6,62 @@ import { Container } from "@/components/layout/container";
 import { Button } from "@/components/ui/button";
 import { TaskCard } from "@/components/tasks/task-card";
 import { TaskStats } from "@/components/tasks/task-stats";
-import { mockTaskApi, type Task } from "@/lib/mock-data";
 import { Plus } from "lucide-react";
+import { useTasks } from "@/lib/tasks-context";
 import { useRouter } from "next/navigation";
+import { Task } from "@/types";
 
 export default function HomePage() {
   const router = useRouter();
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const {
+    fetchTasks,
+    taskList,
+    deleteTask,
+    toggleTaskStatus,
+    isLoading: contextLoading,
+  } = useTasks();
   const [isLoading, setIsLoading] = useState(true);
+  const [isToggling, setIsToggling] = useState(true);
 
   useEffect(() => {
-    loadTasks();
+    const fetchData = async () => {
+      try {
+        await fetchTasks();
+      } catch (error) {
+        console.error("Failed to load tasks:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
   }, []);
 
-  const loadTasks = async () => {
+  const handleToggleTask = async (id: number) => {
     try {
-      const tasks = await mockTaskApi.getTasks();
-      setTasks(tasks);
+      setIsToggling(true);
+      await toggleTaskStatus(id);
     } catch (error) {
-      console.error("Failed to load tasks:", error);
+      console.error("Failed to toggle task:", error);
     } finally {
-      setIsLoading(false);
+      setIsToggling(false);
     }
   };
 
-  const handleToggleTask = async (id: string) => {
-    const task = tasks.find((t) => t.id === id);
-    if (task) {
-      try {
-        await mockTaskApi.updateTask(id, { completed: !task.completed });
-        setTasks(
-          tasks.map((t) =>
-            t.id === id ? { ...t, completed: !t.completed } : t
-          )
-        );
-      } catch (error) {
-        console.error("Failed to toggle task:", error);
-      }
-    }
-  };
-
-  const handleDeleteTask = async (id: string) => {
+  const handleDeleteTask = async (id: number) => {
     try {
-      await mockTaskApi.deleteTask(id);
-      setTasks(tasks.filter((t) => t.id !== id));
+      await deleteTask(id);
     } catch (error) {
       console.error("Failed to delete task:", error);
     }
   };
 
   const stats = {
-    total: tasks.length,
-    completed: tasks.filter((t) => t.completed).length,
+    total: taskList.length,
+    completed: taskList.filter((t) => t.completed).length,
   };
 
-  if (isLoading) {
+  if (isLoading || contextLoading) {
     return (
       <Container>
         <Header />
@@ -72,17 +73,23 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#121212]">
-      <div className="max-w-3xl mx-auto px-4 py-8">
+    <div className="bg-[#1A1A1A]">
+      <div className="h-[200px] bg-black flex justify-center items-center relative">
         <Header />
+        <div className="px-4 py-8 absolute w-full max-w-3xl mx-auto top-[8.5rem]">
+          <Button
+            className="rounded-[8px]"
+            onClick={() => router.push("/create")}
+          >
+            Create Task <Plus className="w-5 h-5" />
+          </Button>
+        </div>
+      </div>
 
-        <Button className="mb-8 rounded-[8px]" onClick={() => router.push("/create")}>
-          Create Task <Plus className="w-5 h-5" />
-        </Button>
-
+      <Container>
         <TaskStats total={stats.total} completed={stats.completed} />
 
-        {tasks.length === 0 ? (
+        {taskList.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16">
             <div className="mb-4">
               <svg
@@ -108,7 +115,7 @@ export default function HomePage() {
           </div>
         ) : (
           <div className="mt-6 space-y-3">
-            {tasks.map((task) => (
+            {taskList.map((task: Task) => (
               <TaskCard
                 key={task.id}
                 title={task.title}
@@ -116,11 +123,13 @@ export default function HomePage() {
                 onToggle={() => handleToggleTask(task.id)}
                 onDelete={() => handleDeleteTask(task.id)}
                 id={task.id}
+                color={task.color}
+                isLoading={isToggling}
               />
             ))}
           </div>
         )}
-      </div>
+      </Container>
     </div>
   );
 }

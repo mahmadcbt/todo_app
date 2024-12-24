@@ -1,4 +1,4 @@
-"use client"
+"use client";
 import { createContext, useContext, useState, ReactNode } from "react";
 import axios from "axios";
 import { Task, TasksContextType } from "@/types";
@@ -6,7 +6,9 @@ import { Task, TasksContextType } from "@/types";
 const TasksContext = createContext<TasksContextType | undefined>(undefined);
 
 export function TasksProvider({ children }: { children: ReactNode }) {
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const [taskList, setTaskList] = useState<Task[]>([]);
+  const [completed, setCompleted] = useState();
+  const [total, setTotal] = useState();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -16,7 +18,9 @@ export function TasksProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
     try {
       const response = await axios.get(`${API_URL}/tasks`);
-      setTasks(response.data);
+      setTaskList(response.data.data.tasks);
+      setCompleted(response.data.data.completedTasks);
+      setTotal(response.data.data.totalTasks);
     } catch (error) {
       setError("Failed to fetch tasks");
     } finally {
@@ -26,42 +30,73 @@ export function TasksProvider({ children }: { children: ReactNode }) {
 
   const addTask = async (
     task: Omit<Task, "id" | "createdAt" | "updatedAt">
-  ) => {
+  ): Promise<void> => {
     try {
       const response = await axios.post(`${API_URL}/tasks`, task);
-      setTasks((prev) => [...prev, response.data]);
+      setTaskList((prev) => [...prev, response.data]);
     } catch (error) {
       setError("Failed to add task");
     }
   };
 
-  const updateTask = async (id: string, task: Partial<Task>) => {
+  const updateTask = async (id: number, task: Partial<Task>) => {
     try {
       const response = await axios.put(`${API_URL}/tasks/${id}`, task);
-      setTasks((prev) => prev.map((t) => (t.id === id ? response.data : t)));
+      setTaskList((prev) => prev.map((t) => (t.id === id ? response.data : t)));
     } catch (error) {
       setError("Failed to update task");
     }
   };
 
-  const deleteTask = async (id: string) => {
+  const getTaskById = async (id: number) => {
+    setIsLoading(true);
+    try {
+      const response = await axios.get(`${API_URL}/tasks/${id}`);
+      // Make sure the response matches the structure you're expecting in EditTaskPage
+      // Currently you're using loadedTask.data in EditTaskPage
+      return {
+        data: response.data.data,
+        success: true,
+      };
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Failed to fetch task");
+      return {
+        data: null,
+        success: false,
+        error: "Failed to fetch task",
+      };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const deleteTask = async (id: number) => {
     try {
       await axios.delete(`${API_URL}/tasks/${id}`);
-      setTasks((prev) => prev.filter((t) => t.id !== id));
+      setTaskList((prev) => prev.filter((t) => t.id !== id));
     } catch (error) {
       setError("Failed to delete task");
     }
   };
 
-  const toggleTaskStatus = async (id: string) => {
-    const task = tasks.find((t) => t.id === id);
+  const toggleTaskStatus = async (id: number) => {
+    const task = taskList.find((t) => t.id === id);
     if (task) {
-      await updateTask(id, { completed: !task.completed });
+      try {
+        const response = await axios.put(`${API_URL}/tasks/${id}`, {
+          completed: !task.completed,
+        });
+        setTaskList((prev) =>
+          prev.map((t) => (t.id === id ? response.data.data : t))
+        );
+      } catch (error) {
+        setError("Failed to toggle task status");
+      }
     }
   };
 
   const value = {
-    tasks,
+    taskList,
     isLoading,
     error,
     fetchTasks,
@@ -69,6 +104,9 @@ export function TasksProvider({ children }: { children: ReactNode }) {
     updateTask,
     deleteTask,
     toggleTaskStatus,
+    getTaskById,
+    completed,
+    total,
   };
 
   return (

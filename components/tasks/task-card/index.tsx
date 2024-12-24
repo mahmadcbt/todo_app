@@ -1,19 +1,31 @@
 "use client";
-import { Trash2 } from "lucide-react";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { Trash2, Loader2 } from "lucide-react";
+import { cn, getColorClass } from "@/lib/utils";
 import { TaskCardProps } from "@/types";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 export function TaskCard({
   title,
+  color,
   completed,
   onToggle,
   onDelete,
   id,
+  isLoading
 }: TaskCardProps) {
   const router = useRouter();
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsDeleting(true);
+    try {
+      await onDelete();
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   return (
     <div className="bg-[#1A1A1A] rounded-lg p-4 flex items-center gap-4 cursor-pointer group">
@@ -23,8 +35,8 @@ export function TaskCard({
           onToggle();
         }}
         className={cn(
-          "w-5 h-5 rounded-full border flex items-center justify-center flex-shrink-0",
-          completed ? "border-[#2B7FDC] bg-[#2B7FDC]" : "border-gray-600"
+          "w-5 h-5 rounded-full border flex items-center justify-center flex-shrink-0 transition-colors",
+          getColorClass(color, completed)
         )}
       >
         {completed && (
@@ -49,19 +61,24 @@ export function TaskCard({
           "flex-1 text-gray-100",
           completed && "line-through text-gray-500"
         )}
-        onClick={(e) => router.push(`/edit/${id}`)}
+        onClick={(e) => {
+          e.stopPropagation();
+          router.push(`/edit/${id}`);
+        }}
       >
         {title}
       </span>
 
       <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onDelete();
-        }}
-        className="group-hover:opacity-100 text-gray-400 hover:text-gray-300 p-1"
+        onClick={handleDelete}
+        disabled={isDeleting}
+        className="group-hover:opacity-100 text-gray-400 hover:text-gray-300 p-1 disabled:cursor-not-allowed"
       >
-        <Trash2 className="w-5 h-5" />
+        {isDeleting ? (
+          <Loader2 className="w-5 h-5 animate-spin" />
+        ) : (
+          <Trash2 className="w-5 h-5" />
+        )}
       </button>
     </div>
   );
