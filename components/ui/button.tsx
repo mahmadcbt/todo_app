@@ -1,31 +1,33 @@
-"use client"
 import { cn } from "@/lib/utils";
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: "primary" | "icon";
-  icon?: React.ReactNode;
 }
 
 export function Button({
   children,
   className,
   variant = "primary",
-  icon,
   ...props
 }: ButtonProps) {
   return (
     <button
       className={cn(
-        "w-full rounded-lg transition-all duration-200",
-        variant === "primary" &&
-          "bg-[#2B7FDC] hover:bg-[#2B7FDC]/90 text-white py-4 px-6 flex items-center justify-center gap-2",
-        variant === "icon" && "p-2 hover:bg-gray-700/50 rounded-full",
+        "relative w-full rounded-lg overflow-hidden",
+        variant === "primary" && [
+          "h-14 text-white font-medium",
+          "before:absolute before:inset-0 before:bg-[#1A1A1A]",
+          "after:absolute after:inset-0 after:bg-[#2B7FDC] after:opacity-50",
+          "hover:after:opacity-60 transition-all",
+        ],
+        variant === "icon" && "p-2 text-gray-400 hover:text-gray-300",
         className
       )}
       {...props}
     >
-      {icon && <span className="w-5 h-5">{icon}</span>}
-      {children}
+      <span className="relative z-10 flex items-center justify-center gap-2">
+        {children}
+      </span>
     </button>
   );
 }

@@ -44,7 +44,7 @@ export const mockTaskApi = {
 
     createTask: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => {
         const newTask: Task = {
-            id: uuidv4(),
+            id: Math.random().toString(36).substr(2, 9),
             ...task,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),

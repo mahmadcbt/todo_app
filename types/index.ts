@@ -31,6 +31,7 @@ export interface TaskCardProps {
     completed: boolean;
     onToggle: () => void;
     onDelete: () => void;
+    id: string;
 }
 
 export interface TaskFormProps {
